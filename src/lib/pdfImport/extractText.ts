@@ -1,11 +1,21 @@
+declare global {
+  // eslint-disable-next-line no-var
+  var pdfjsWorker: { WorkerMessageHandler: unknown } | undefined;
+}
+
 export async function extractTextFromPdf(file: File): Promise<string> {
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  // Intentionally point at a missing worker script: some mobile Safari versions throw
-  // uncatchable errors communicating with a real pdf.js web worker over postMessage.
-  // Pointing at a 404 makes the real Worker fail to load, which pdf.js's own fallback
-  // logic catches, dropping to an in-page "fake worker" that runs on the main thread
-  // instead (verified locally as reliable for files this size).
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf-worker-disabled.mjs";
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+
+  // Some mobile Safari versions throw an uncatchable error communicating with a real
+  // pdf.js web worker over postMessage. Registering the worker module as pdf.js's
+  // documented main-thread fallback (`globalThis.pdfjsWorker`) makes it skip creating
+  // a real Worker entirely and run parsing in-process instead (verified locally as
+  // reliable for files this size).
+  if (!globalThis.pdfjsWorker) {
+    const worker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
+    globalThis.pdfjsWorker = { WorkerMessageHandler: worker.WorkerMessageHandler };
+  }
 
   const buffer = await file.arrayBuffer();
   const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
