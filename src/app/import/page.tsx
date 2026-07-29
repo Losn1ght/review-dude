@@ -71,10 +71,9 @@ export default function ImportPage() {
       setStep("review");
     } catch (err) {
       console.error("PDF import failed:", err);
+      // TEMPORARY: showing raw error on-screen to debug mobile-only failures. Revert once diagnosed.
       setUploadError(
-        process.env.NODE_ENV === "development"
-          ? `Import failed: ${err instanceof Error ? err.message : String(err)}`
-          : "We couldn't read that PDF. Make sure it's not password-protected or corrupted."
+        `We couldn't read that PDF. Debug info: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`
       );
     } finally {
       setIsProcessing(false);
