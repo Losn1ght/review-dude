@@ -69,8 +69,13 @@ export default function ImportPage() {
         category: result.suggestedCategories[0] ?? "",
       });
       setStep("review");
-    } catch {
-      setUploadError("We couldn't read that PDF. Make sure it's not password-protected or corrupted.");
+    } catch (err) {
+      console.error("PDF import failed:", err);
+      setUploadError(
+        process.env.NODE_ENV === "development"
+          ? `Import failed: ${err instanceof Error ? err.message : String(err)}`
+          : "We couldn't read that PDF. Make sure it's not password-protected or corrupted."
+      );
     } finally {
       setIsProcessing(false);
     }
