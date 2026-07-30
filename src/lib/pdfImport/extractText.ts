@@ -1,21 +1,32 @@
-declare global {
-  // eslint-disable-next-line no-var
-  var pdfjsWorker: { WorkerMessageHandler: unknown } | undefined;
+function ensureReadableStreamAsyncIterator() {
+  // Some Safari/WebKit versions ship ReadableStream without Symbol.asyncIterator support,
+  // which pdf.js relies on internally (`for await (const value of readableStream)` in
+  // getTextContent). Polyfill it so pdf.js's stream consumption works everywhere.
+  const proto = ReadableStream.prototype as ReadableStream & {
+    [Symbol.asyncIterator]?: () => AsyncIterator<unknown>;
+  };
+  if (typeof proto[Symbol.asyncIterator] === "function") return;
+
+  proto[Symbol.asyncIterator] = function (this: ReadableStream) {
+    const reader = this.getReader();
+    return {
+      next: () => reader.read(),
+      return: (value?: unknown) => {
+        reader.releaseLock();
+        return Promise.resolve({ done: true as const, value });
+      },
+      [Symbol.asyncIterator]() {
+        return this;
+      },
+    };
+  };
 }
 
 export async function extractTextFromPdf(file: File): Promise<string> {
+  ensureReadableStreamAsyncIterator();
+
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
   pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-
-  // Some mobile Safari versions throw an uncatchable error communicating with a real
-  // pdf.js web worker over postMessage. Registering the worker module as pdf.js's
-  // documented main-thread fallback (`globalThis.pdfjsWorker`) makes it skip creating
-  // a real Worker entirely and run parsing in-process instead (verified locally as
-  // reliable for files this size).
-  if (!globalThis.pdfjsWorker) {
-    const worker = await import("pdfjs-dist/legacy/build/pdf.worker.mjs");
-    globalThis.pdfjsWorker = { WorkerMessageHandler: worker.WorkerMessageHandler };
-  }
 
   const buffer = await file.arrayBuffer();
   const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
