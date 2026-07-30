@@ -71,10 +71,10 @@ export default function ImportPage() {
       setStep("review");
     } catch (err) {
       console.error("PDF import failed:", err);
-      // TEMPORARY: showing raw error on-screen to debug mobile-only failures. Revert once diagnosed.
-      setUploadError(
-        `We couldn't read that PDF. Debug info: ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`
-      );
+      // TEMPORARY: showing raw error + stack on-screen to debug mobile-only failures. Revert once diagnosed.
+      const detail =
+        err instanceof Error ? `${err.name}: ${err.message}\n${err.stack ?? "(no stack)"}` : String(err);
+      setUploadError(`We couldn't read that PDF. Debug info: ${detail}`);
     } finally {
       setIsProcessing(false);
     }

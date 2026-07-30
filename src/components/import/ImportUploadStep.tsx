@@ -76,7 +76,7 @@ export function ImportUploadStep({ onFileSelected, isProcessing, error }: Import
         </CardContent>
       </Card>
 
-      {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
+      {error && <p className="mt-3 text-sm whitespace-pre-wrap text-destructive">{error}</p>}
     </div>
   );
 }
